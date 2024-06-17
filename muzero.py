@@ -119,7 +119,9 @@ class MuZero:
 
         cpu_actor = CPUActor.remote()
         cpu_weights = cpu_actor.get_initial_weights.remote(self.config)
-        self.checkpoint["weights"], self.summary = copy.deepcopy(ray.get(cpu_weights))
+        self.checkpoint["weights"], self.summary = copy.deepcopy(
+            ray.get(cpu_weights)
+        )
 
         # Workers
         self.self_play_workers = None
@@ -145,7 +147,8 @@ class MuZero:
                 self.config.train_on_gpu
                 + self.config.num_workers * self.config.selfplay_on_gpu
                 + log_in_tensorboard * self.config.selfplay_on_gpu
-                + self.config.use_last_model_value * self.config.reanalyse_on_gpu
+                + self.config.use_last_model_value
+                * self.config.reanalyse_on_gpu
             )
             if 1 < num_gpus_per_worker:
                 num_gpus_per_worker = math.floor(num_gpus_per_worker)
@@ -171,13 +174,17 @@ class MuZero:
         if self.config.use_last_model_value:
             self.reanalyse_worker = replay_buffer.Reanalyse.options(
                 num_cpus=0,
-                num_gpus=num_gpus_per_worker if self.config.reanalyse_on_gpu else 0,
+                num_gpus=num_gpus_per_worker
+                if self.config.reanalyse_on_gpu
+                else 0,
             ).remote(self.checkpoint, self.config)
 
         self.self_play_workers = [
             self_play.SelfPlay.options(
                 num_cpus=0,
-                num_gpus=num_gpus_per_worker if self.config.selfplay_on_gpu else 0,
+                num_gpus=num_gpus_per_worker
+                if self.config.selfplay_on_gpu
+                else 0,
             ).remote(
                 self.checkpoint,
                 self.Game,
@@ -234,7 +241,8 @@ class MuZero:
 
         # Save hyperparameters to TensorBoard
         hp_table = [
-            f"| {key} | {value} |" for key, value in self.config.__dict__.items()
+            f"| {key} | {value} |"
+            for key, value in self.config.__dict__.items()
         ]
         writer.add_text(
             "Hyperparameters",
@@ -301,7 +309,9 @@ class MuZero:
                     "2.Workers/2.Training_steps", info["training_step"], counter
                 )
                 writer.add_scalar(
-                    "2.Workers/3.Self_played_steps", info["num_played_steps"], counter
+                    "2.Workers/3.Self_played_steps",
+                    info["num_played_steps"],
+                    counter,
                 )
                 writer.add_scalar(
                     "2.Workers/4.Reanalysed_games",
@@ -313,13 +323,21 @@ class MuZero:
                     info["training_step"] / max(1, info["num_played_steps"]),
                     counter,
                 )
-                writer.add_scalar("2.Workers/6.Learning_rate", info["lr"], counter)
+                writer.add_scalar(
+                    "2.Workers/6.Learning_rate", info["lr"], counter
+                )
                 writer.add_scalar(
                     "3.Loss/1.Total_weighted_loss", info["total_loss"], counter
                 )
-                writer.add_scalar("3.Loss/Value_loss", info["value_loss"], counter)
-                writer.add_scalar("3.Loss/Reward_loss", info["reward_loss"], counter)
-                writer.add_scalar("3.Loss/Policy_loss", info["policy_loss"], counter)
+                writer.add_scalar(
+                    "3.Loss/Value_loss", info["value_loss"], counter
+                )
+                writer.add_scalar(
+                    "3.Loss/Reward_loss", info["reward_loss"], counter
+                )
+                writer.add_scalar(
+                    "3.Loss/Policy_loss", info["policy_loss"], counter
+                )
                 print(
                     f'Last test reward: {info["total_reward"]:.2f}. Training step: {info["training_step"]}/{self.config.training_steps}. Played games: {info["num_played_games"]}. Loss: {info["total_loss"]:.2f}',
                     end="\r",
@@ -340,7 +358,9 @@ class MuZero:
                     "buffer": self.replay_buffer,
                     "num_played_games": self.checkpoint["num_played_games"],
                     "num_played_steps": self.checkpoint["num_played_steps"],
-                    "num_reanalysed_games": self.checkpoint["num_reanalysed_games"],
+                    "num_reanalysed_games": self.checkpoint[
+                        "num_reanalysed_games"
+                    ],
                 },
                 open(path, "wb"),
             )
@@ -355,7 +375,9 @@ class MuZero:
                 self.shared_storage_worker.get_checkpoint.remote()
             )
         if self.replay_buffer_worker:
-            self.replay_buffer = ray.get(self.replay_buffer_worker.get_buffer.remote())
+            self.replay_buffer = ray.get(
+                self.replay_buffer_worker.get_buffer.remote()
+            )
 
         print("\nShutting down workers...")
 
@@ -367,7 +389,12 @@ class MuZero:
         self.shared_storage_worker = None
 
     def test(
-        self, render=True, opponent=None, muzero_player=None, num_tests=1, num_gpus=0
+        self,
+        render=True,
+        opponent=None,
+        muzero_player=None,
+        num_tests=1,
+        num_gpus=0,
     ):
         """
         Test the model in a dedicated thread.
@@ -387,11 +414,15 @@ class MuZero:
             num_gpus (int): Number of GPUs to use, 0 forces to use the CPU. Defaults to 0.
         """
         opponent = opponent if opponent else self.config.opponent
-        muzero_player = muzero_player if muzero_player else self.config.muzero_player
+        muzero_player = (
+            muzero_player if muzero_player else self.config.muzero_player
+        )
         self_play_worker = self_play.SelfPlay.options(
             num_cpus=0,
             num_gpus=num_gpus,
-        ).remote(self.checkpoint, self.Game, self.config, numpy.random.randint(10000))
+        ).remote(
+            self.checkpoint, self.Game, self.config, numpy.random.randint(10000)
+        )
         results = []
         for i in range(num_tests):
             print(f"Testing {i+1}/{num_tests}")
@@ -409,7 +440,9 @@ class MuZero:
         self_play_worker.close_game.remote()
 
         if len(self.config.players) == 1:
-            result = numpy.mean([sum(history.reward_history) for history in results])
+            result = numpy.mean(
+                [sum(history.reward_history) for history in results]
+            )
         else:
             result = numpy.mean(
                 [
@@ -531,7 +564,9 @@ def hyperparameter_search(
         while 0 < budget or any(running_experiments):
             for i, experiment in enumerate(running_experiments):
                 if experiment and experiment.config.training_steps <= ray.get(
-                    experiment.shared_storage_worker.get_info.remote("training_step")
+                    experiment.shared_storage_worker.get_info.remote(
+                        "training_step"
+                    )
                 ):
                     experiment.terminate_workers()
                     result = experiment.test(False, num_tests=num_tests)
@@ -548,7 +583,9 @@ def hyperparameter_search(
                     if 0 < budget:
                         param = optimizer.ask()
                         print(f"Launching new experiment: {param.value}")
-                        muzero = MuZero(game_name, param.value, parallel_experiments)
+                        muzero = MuZero(
+                            game_name, param.value, parallel_experiments
+                        )
                         muzero.param = param
                         muzero.train(False)
                         running_experiments[i] = muzero
@@ -607,8 +644,13 @@ def load_model_menu(muzero, game_name):
         replay_buffer_path = input(
             "Enter a path to the replay_buffer.pkl, or ENTER if none: "
         )
-        while replay_buffer_path and not pathlib.Path(replay_buffer_path).is_file():
-            replay_buffer_path = input("Invalid replay buffer path. Try again: ")
+        while (
+            replay_buffer_path
+            and not pathlib.Path(replay_buffer_path).is_file()
+        ):
+            replay_buffer_path = input(
+                "Invalid replay buffer path. Try again: "
+            )
     else:
         checkpoint_path = options[choice] / "model.checkpoint"
         replay_buffer_path = options[choice] / "replay_buffer.pkl"
@@ -634,7 +676,9 @@ if __name__ == "__main__":
         # Let user pick a game
         games = [
             filename.stem
-            for filename in sorted(list((pathlib.Path.cwd() / "games").glob("*.py")))
+            for filename in sorted(
+                list((pathlib.Path.cwd() / "games").glob("*.py"))
+            )
             if filename.name != "abstract_game.py"
         ]
         for i in range(len(games)):
@@ -689,7 +733,9 @@ if __name__ == "__main__":
                 while not done:
                     action = env.human_to_action()
                     observation, reward, done = env.step(action)
-                    print(f"\nAction: {env.action_to_string(action)}\nReward: {reward}")
+                    print(
+                        f"\nAction: {env.action_to_string(action)}\nReward: {reward}"
+                    )
                     env.render()
             elif choice == 6:
                 # Define here the parameters to tune
@@ -700,7 +746,9 @@ if __name__ == "__main__":
                 parallel_experiments = 2
                 lr_init = nevergrad.p.Log(lower=0.0001, upper=0.1)
                 discount = nevergrad.p.Log(lower=0.95, upper=0.9999)
-                parametrization = nevergrad.p.Dict(lr_init=lr_init, discount=discount)
+                parametrization = nevergrad.p.Dict(
+                    lr_init=lr_init, discount=discount
+                )
                 best_hyperparameters = hyperparameter_search(
                     game_name, parametrization, budget, parallel_experiments, 20
                 )

@@ -50,7 +50,7 @@ class MuZeroConfig:
         ### Network
         self.network = "resnet"  # "resnet" / "fullyconnected"
         self.support_size = 10  # Value and reward are scaled (with almost sqrt) and encoded on a vector with a range of -support_size to support_size. Choose it so that support_size <= sqrt(max(abs(discounted reward)))
-        
+
         # Residual Network
         self.downsample = False  # Downsample observations before representation network, False / "CNN" (lighter) / "resnet" (See paper appendix Network Architecture)
         self.blocks = 3  # Number of blocks in the ResNet
@@ -61,7 +61,7 @@ class MuZeroConfig:
         self.resnet_fc_reward_layers = [64]  # Define the hidden layers in the reward head of the dynamic network
         self.resnet_fc_value_layers = [64]  # Define the hidden layers in the value head of the prediction network
         self.resnet_fc_policy_layers = [64]  # Define the hidden layers in the policy head of the prediction network
-        
+
         # Fully Connected Network
         self.encoding_size = 32
         self.fc_representation_layers = []  # Define the hidden layers in the representation network
@@ -96,7 +96,8 @@ class MuZeroConfig:
         self.replay_buffer_size = 10000  # Number of self-play games to keep in the replay buffer
         self.num_unroll_steps = 42  # Number of game moves to keep for every batch element
         self.td_steps = 42  # Number of steps in the future to take into account for calculating the target value
-        self.PER = True  # Prioritized Replay (See paper appendix Training), select in priority the elements in the replay buffer which are unexpected for the network
+        self.PER = True  # Prioritized Replay (See paper appendix Training), 
+        # select in priority the elements in the replay buffer which are unexpected for the network
         self.PER_alpha = 0.5  # How much prioritization is used, 0 corresponding to the uniform case, paper suggests 1
 
         # Reanalyze (See paper appendix Reanalyse)
@@ -189,7 +190,9 @@ class Game(AbstractGame):
         Returns:
             An integer from the action space.
         """
-        choice = input(f"Enter the column to play for the player {self.to_play()}: ")
+        choice = input(
+            f"Enter the column to play for the player {self.to_play()}: "
+        )
         while choice not in [str(action) for action in self.legal_actions()]:
             choice = input("Enter another column : ")
         return int(choice)
